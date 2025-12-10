@@ -80,7 +80,6 @@ services:
       - SPARK_MASTER_HOST=spark-master
     volumes:
       - ./app:/app
-      - ./spark:/spark
     ports:
       - "8080:8080"
       - "7077:7077"
