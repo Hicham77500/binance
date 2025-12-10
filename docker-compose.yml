@@ -78,6 +78,10 @@ services:
     restart: "on-failure"
     environment:
       - SPARK_MASTER_HOST=spark-master
+
+    # AUTOMATISATION (exécution automatique du script Spark)
+    command: ["/bin/bash", "-c", "spark-submit /app/get-data.py"]
+    
     volumes:
       - ./app:/app
     ports:
