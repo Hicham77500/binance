@@ -1,0 +1,169 @@
+version: "3"
+
+networks:
+  hadoop-network:
+
+services:
+
+  namenode:
+    image: bde2020/hadoop-namenode
+    container_name: namenode
+    restart: "on-failure"
+    networks:
+      - hadoop-network
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    environment:
+      - CLUSTER_NAME=hadoop_cluster
+    env_file:
+      - ./hadoop.env
+
+  datanode1:
+    image: bde2020/hadoop-datanode
+    container_name: datanode_1
+    depends_on:
+      - namenode
+    restart: "on-failure"
+    networks:
+      - hadoop-network
+    volumes:
+      - hadoop_datanode-1:/hadoop/dfs/data
+    ports:
+      - "9864:9864"
+    env_file:
+      - ./hadoop.env
+
+  datanode2:
+    image: bde2020/hadoop-datanode
+    container_name: datanode_2
+    depends_on:
+      - namenode
+    restart: "on-failure"
+    networks:
+      - hadoop-network
+    volumes:
+      - hadoop_datanode-2:/hadoop/dfs/data
+    ports:
+      - "9865:9864"
+    env_file:
+      - ./hadoop.env
+
+  datanode3:
+    image: bde2020/hadoop-datanode
+    container_name: datanode_3
+    depends_on:
+      - namenode
+    restart: "on-failure"
+    networks:
+      - hadoop-network
+    volumes:
+      - hadoop_datanode-3:/hadoop/dfs/data
+    ports:
+      - "9866:9864"
+    env_file:
+      - ./hadoop.env
+
+  # SPARK =====================================================
+
+  spark-master:
+    image: bde2020/spark-master
+    container_name: spark-master
+    depends_on:
+      - namenode
+    networks:
+      - hadoop-network
+    restart: "on-failure"
+    environment:
+      - SPARK_MASTER_HOST=spark-master
+    volumes:
+      - ./app:/app
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+      - "4040:4040"
+
+  spark_worker_1:
+    image: bde2020/spark-worker
+    container_name: spark_worker_1
+    depends_on:
+      - spark-master
+    networks:
+      - hadoop-network
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+    ports:
+      - "8081:8081"
+
+  spark_worker_2:
+    image: bde2020/spark-worker
+    container_name: spark_worker_2
+    depends_on:
+      - spark-master
+    networks:
+      - hadoop-network
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+    ports:
+      - "8082:8081"
+
+  spark_worker_3:
+    image: bde2020/spark-worker
+    container_name: spark_worker_3
+    depends_on:
+      - spark-master
+    networks:
+      - hadoop-network
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+    ports:
+      - "8083:8081"
+
+  spark_history_server:
+    image: bde2020/spark-history-server
+    container_name: spark_history_server
+    depends_on:
+      - spark-master
+    networks:
+      - hadoop-network
+    ports:
+      - "18081:18081"
+    volumes:
+      - hadoop_spark_history_server:/hadoop/spark/spark-events
+
+  # MONGO ======================================================
+
+  mongo:
+    image: mongo
+    container_name: mongo
+    restart: always
+    networks:
+      - hadoop-network
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: pwd
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
+    networks:
+      - hadoop-network
+    ports:
+      - "8990:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: pwd
+      ME_CONFIG_MONGODB_URL: mongodb://admin:pwd@mongo:27017/
+
+volumes:
+  hadoop_namenode:
+  hadoop_datanode-1:
+  hadoop_datanode-2:
+  hadoop_datanode-3:
+  hadoop_historyserver:
+  hadoop_spark_history_server:
