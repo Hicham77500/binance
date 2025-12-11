@@ -36,6 +36,9 @@ spark_data/
 
 # Environment variables (NEVER commit)
 .env
+.env.local
+.env.*.local
+.env.prod
 
 # Temporary files
 *.tmp

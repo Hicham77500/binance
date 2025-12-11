@@ -1,0 +1,46 @@
+=== Binance Batch KPI ===
+25/12/11 15:57:17 INFO SparkContext: Running Spark version 3.3.0
+25/12/11 15:57:18 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+25/12/11 15:57:18 INFO ResourceUtils: ==============================================================
+25/12/11 15:57:18 INFO ResourceUtils: No custom resources configured for spark.driver.
+25/12/11 15:57:18 INFO ResourceUtils: ==============================================================
+25/12/11 15:57:18 INFO SparkContext: Submitted application: BinanceBatchKPI
+25/12/11 15:57:18 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 2048, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+25/12/11 15:57:18 INFO ResourceProfile: Limiting resource is cpu
+25/12/11 15:57:18 INFO ResourceProfileManager: Added ResourceProfile id: 0
+25/12/11 15:57:18 INFO SecurityManager: Changing view acls to: root
+25/12/11 15:57:18 INFO SecurityManager: Changing modify acls to: root
+25/12/11 15:57:18 INFO SecurityManager: Changing view acls groups to: 
+25/12/11 15:57:18 INFO SecurityManager: Changing modify acls groups to: 
+25/12/11 15:57:18 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(root); groups with view permissions: Set(); users  with modify permissions: Set(root); groups with modify permissions: Set()
+25/12/11 15:57:18 INFO Utils: Successfully started service 'sparkDriver' on port 34805.
+25/12/11 15:57:18 INFO SparkEnv: Registering MapOutputTracker
+25/12/11 15:57:18 INFO SparkEnv: Registering BlockManagerMaster
+25/12/11 15:57:19 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+25/12/11 15:57:19 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+25/12/11 15:57:19 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+25/12/11 15:57:19 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-b0943c06-ff40-4502-b784-d6861f004ae3
+25/12/11 15:57:19 INFO MemoryStore: MemoryStore started with capacity 366.3 MiB
+25/12/11 15:57:19 INFO SparkEnv: Registering OutputCommitCoordinator
+25/12/11 15:57:19 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+25/12/11 15:57:19 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://spark-master:7077...
+25/12/11 15:57:19 INFO TransportClientFactory: Successfully created connection to spark-master/172.18.0.7:7077 after 76 ms (0 ms spent in bootstraps)
+25/12/11 15:57:20 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20251211155720-0007
+25/12/11 15:57:20 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 40627.
+25/12/11 15:57:20 INFO NettyBlockTransferService: Server created on 9c24ca07ad1e:40627
+25/12/11 15:57:20 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+25/12/11 15:57:20 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20251211155720-0007/0 on worker-20251210154739-172.18.0.2-46805 (172.18.0.2:46805) with 10 core(s)
+25/12/11 15:57:20 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, 9c24ca07ad1e, 40627, None)
+25/12/11 15:57:20 INFO StandaloneSchedulerBackend: Granted executor ID app-20251211155720-0007/0 on hostPort 172.18.0.2:46805 with 10 core(s), 2.0 GiB RAM
+25/12/11 15:57:20 INFO BlockManagerMasterEndpoint: Registering block manager 9c24ca07ad1e:40627 with 366.3 MiB RAM, BlockManagerId(driver, 9c24ca07ad1e, 40627, None)
+25/12/11 15:57:20 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, 9c24ca07ad1e, 40627, None)
+25/12/11 15:57:20 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, 9c24ca07ad1e, 40627, None)
+25/12/11 15:57:20 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20251211155720-0007/0 is now RUNNING
+25/12/11 15:57:20 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+Reading latest HDFS batch: hdfs://namenode:9000/users/ipssi/input/binance_batch/20251211_155656
+Rows: 3446, Columns: 22
+Computing KPIs...
+Persisting KPIs to MongoDB...
+Inserted 20 asc and 20 desc docs
+MongoDB connection closed
+=== Completed ===
