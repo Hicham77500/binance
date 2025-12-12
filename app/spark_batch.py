@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+"""
+Batch KPI Spark : lit le dernier batch CSV sur HDFS, calcule des KPI, puis
+les envoie vers MongoDB pour consommation (ex. Power BI). Configuration
+pilotée par variables d'environnement.
+"""
+
 import os
 from pyspark.sql.functions import col
 from pyspark.sql.types import (
@@ -8,9 +14,11 @@ from pyspark.sql import SparkSession
 from pymongo import MongoClient
 
 def get_env(name: str, default: str) -> str:
+    """Retourne une variable d'environnement avec valeur par défaut."""
     return os.getenv(name, default)
 
 def create_spark_session():
+    """Crée une session Spark cluster en lisant la config via les env vars."""
     master = get_env("SPARK_MASTER_HOST", "spark-master")
     master_port = get_env("SPARK_MASTER_PORT", "7077")
     hdfs_nn = get_env("HDFS_NAMENODE", "namenode")
@@ -29,10 +37,12 @@ def create_spark_session():
     return spark
 
 SCHEMA = StructType([
+    # Colonnes prix/volumes : String -> cast plus tard pour tolérer des vides
     StructField("askPrice", StringType(), True),
     StructField("askQty", StringType(), True),
     StructField("bidPrice", StringType(), True),
     StructField("bidQty", StringType(), True),
+    # Timestamps epoch millis : Long
     StructField("closeTime", LongType(), True),
     StructField("count", LongType(), True),
     StructField("firstId", LongType(), True),
@@ -54,24 +64,24 @@ SCHEMA = StructType([
 ])
 
 def get_latest_hdfs_subdir(spark: SparkSession) -> str:
-    """Return the most recent timestamped subdirectory under HDFS_PATH."""
+    """Retourne le sous-dossier HDFS le plus récent (tri lexicographique)."""
     hdfs_nn = get_env("HDFS_NAMENODE", "namenode")
     hdfs_port = get_env("HDFS_PORT", "9000")
     hdfs_base = get_env("HDFS_PATH", "/users/ipssi/input/binance_batch")
     base_uri = f"hdfs://{hdfs_nn}:{hdfs_port}{hdfs_base}"
 
-    # List subdirectories via Hadoop FileSystem using Spark's Java gateway
+    # Liste HDFS via l'API Java (pas de subprocess) grâce à la gateway Py4J
     jsc = spark.sparkContext._jsc
     jvm = spark._jvm
     hconf = jsc.hadoopConfiguration()
     fs = jvm.org.apache.hadoop.fs.FileSystem.get(hconf)
     Path = jvm.org.apache.hadoop.fs.Path
 
-    status = fs.listStatus(Path(base_uri))
+    status = fs.listStatus(Path(base_uri))  # FileStatus[]
     if status is None or len(status) == 0:
         raise FileNotFoundError(f"No subdirectories found in {base_uri}")
 
-    # Keep only directories and sort by name (timestamp folders YYYYMMDD_HHMMSS)
+    # Ne garder que les dossiers (noms au format YYYYMMDD_HHMMSS) puis trier
     dirs = [s for s in status if s.isDirectory()]
     if not dirs:
         raise FileNotFoundError(f"No directory entries in {base_uri}")
@@ -82,27 +92,27 @@ def get_latest_hdfs_subdir(spark: SparkSession) -> str:
 def read_latest_batch(spark: SparkSession):
     latest_uri = get_latest_hdfs_subdir(spark)
     print(f"Reading latest HDFS batch: {latest_uri}")
-    df = spark.read.schema(SCHEMA).csv(latest_uri)
-    # Cast numerics
+    df = spark.read.schema(SCHEMA).csv(latest_uri)  # Schéma explicite
+    # Cast des métriques utilisées dans les KPI
     df = df.withColumn("lastPrice", col("lastPrice").cast(DoubleType()))
     df = df.withColumn("quoteVolume", col("quoteVolume").cast(DoubleType()))
     return df
 
 def compute_kpis(df):
     print("Computing KPIs...")
-    # Count distinct symbols
+    # Distinct de paires crypto
     count_cryptos = df.select(col("symbol")).where(col("symbol").isNotNull()).distinct().count()
 
-    # Min/Max/Avg over lastPrice (exclude zeros and nulls)
+    # Min/Max/Avg sur le prix (ignore null/0)
     last_price_min = df.where((col("lastPrice").isNotNull()) & (col("lastPrice") != 0)).agg({"lastPrice": "min"}).collect()[0][0]
     last_price_max = df.where(col("lastPrice").isNotNull()).agg({"lastPrice": "max"}).collect()[0][0]
     last_price_avg = df.where((col("lastPrice").isNotNull()) & (col("lastPrice") != 0)).agg({"lastPrice": "avg"}).collect()[0][0]
 
-    # Latest ingestion timestamp
+    # Timestamp d'ingestion le plus récent
     ts_row = df.select(col("timestamp_ingestion")).where(col("timestamp_ingestion").isNotNull()).orderBy(col("timestamp_ingestion").desc()).limit(1).collect()
     current_timestamp = ts_row[0][0] if ts_row else None
 
-    # Top 20 asc/desc by quoteVolume (exclude zeros/nulls)
+    # Top 20 asc/desc par volume quote (filtre valeurs nulles)
     base_sel = df.select(col("symbol"), col("lastPrice"), col("quoteVolume")).where(
         (col("lastPrice").isNotNull()) & (col("quoteVolume").isNotNull()) & (col("lastPrice") != 0)
     )
@@ -120,6 +130,7 @@ def compute_kpis(df):
     }
 
 def get_mongo_client():
+    # Connexion Mongo paramétrable (pas de secrets en dur)
     mongo_user = get_env("MONGO_INITDB_ROOT_USERNAME", "admin")
     mongo_pass = get_env("MONGO_INITDB_ROOT_PASSWORD", "SecurePassword123")
     mongo_host = get_env("MONGO_HOST", "mongo")
@@ -131,6 +142,7 @@ def get_mongo_client():
 
 def persist_to_mongo(kpis, db):
     print("Persisting KPIs to MongoDB...")
+    # Document global des KPI
     stats = {
         "count_cryptos": kpis["count_cryptos"],
         "last_price_min": kpis["last_price_min"],
@@ -142,6 +154,7 @@ def persist_to_mongo(kpis, db):
     db.binance_stats.insert_one(stats)
 
     def to_docs(df):
+        # Collect volontaire (petits datasets : top 20)
         rows = df.collect()
         return [
             {

@@ -1,3 +1,5 @@
+"""Ingestion batch Binance -> HDFS (CSV) via Spark, avec retry et métadonnées."""
+
 import requests
 import time
 import os
@@ -6,7 +8,7 @@ from pyspark.sql.functions import current_timestamp, lit
 from datetime import datetime
 
 
-# Configuration depuis variables d'environnement
+# Configuration depuis variables d'environnement (facile à surcharger en dev/prod)
 BINANCE_URL = os.getenv("BINANCE_API_URL", "https://data-api.binance.vision/api/v3/ticker/24hr")
 HDFS_NAMENODE = os.getenv("HDFS_NAMENODE", "namenode")
 HDFS_PORT = os.getenv("HDFS_PORT", "9000")
@@ -19,6 +21,7 @@ HDFS_FULL_PATH = f"hdfs://{HDFS_NAMENODE}:{HDFS_PORT}{HDFS_PATH}"
 # 1) Spark Session (Cluster Mode)
 # ============================================================
 def create_spark_session():
+    """Construit une session Spark cluster mode à partir des variables d'env."""
     spark_master = os.getenv("SPARK_MASTER_HOST", "spark-master")
     spark_port = os.getenv("SPARK_MASTER_PORT", "7077")
     
@@ -44,7 +47,7 @@ def fetch_binance_data(retries=5, initial_delay=2):
     """
     print(f"[{datetime.now()}] Fetching Binance 24h ticker data from {BINANCE_URL}")
 
-    delay = initial_delay
+    delay = initial_delay  # backoff exponentiel sur erreurs temporaires
     for attempt in range(1, retries + 1):
         try:
             response = requests.get(BINANCE_URL, timeout=15)
@@ -89,7 +92,7 @@ def create_dataframe(spark, json_data):
     
     print(f"Creating DataFrame from {len(json_data)} records...")
     
-    df = spark.createDataFrame(json_data)
+    df = spark.createDataFrame(json_data)  # inférence de schéma ici (données API structurées)
     
     # Ajout des métadonnées temporelles
     df = df.withColumn("timestamp_ingestion", current_timestamp()) \
